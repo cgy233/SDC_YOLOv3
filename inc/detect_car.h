@@ -5,16 +5,15 @@
 #define OBJECT_MIN_DISTANCE 100  //两帧目标移动的距离差值
 #define CAR_LEVEL_TIME      10  //队列多少帧没有更新后清楚整个队列
 
+#define DEBUG_LOG                      1
 #define DEBUG                          0
 
 #define DEBUG_2                        1
 
 #define CAR_IN_NUM                     10 //队列里面坐标处于车位内的数量
 
-//车位的坐标 根据实际场景设置
-//ST_POINT A[] = {{765, 491}, {872, 483}, {1010, 530},  {875, 541}}; //车位的不规则四边形坐标
+//ST_POINT A[] = {{765, 491}, {872, 483}, {1010, 530},  {875, 541}};
 
-// 车辆在车位停好后中心的规则矩形坐标
 #define PARK_COR_X1 774
 #define PARK_COR_Y1 401
 
@@ -75,7 +74,6 @@ int PtInPolygon(ST_POINT p, ST_POINT* ptPolygon, int nCount)
 }
 
 #else
-// 利用射线法判断点是否在不规则四边形内
 int PtInPolygon(ST_POINT p, ST_POINT* ptPolygon, int nCount)
 {
 	int nCross = 0, i;
@@ -157,6 +155,10 @@ int calc_distant(int middle_data, int cur_data)
 
 	cur_mid_x = cur_data &0xffff;
 	cur_mid_y = (cur_data>>16) &0xffff;
+#if DEBUG_LOG
+	printf("cur_mid_x: %d\n", cur_mid_x);
+	printf("cur_mid_y: %d\n", cur_mid_y);
+#endif
 
 	//distance = abs(mid_x - cur_mid_x) + abs(mid_y - cur_mid_y);
 	distance = (mid_x - cur_mid_x)*(mid_x - cur_mid_x) + (mid_y - cur_mid_y)*(mid_y - cur_mid_y);
@@ -356,11 +358,10 @@ int get_car_buffer_num(int *car_exist_flag)
 int check_last_frame(int last_frame_num, int frame_num)
 {
 	int car_leaving_flag = 0;
-	// 如果超过CAR_LEVEL_TIME帧没有更新， 即视车辆为已经离开车位
 	if (frame_num - last_frame_num > CAR_LEVEL_TIME)
 	{
 		car_leaving_flag = 1;
-		printf("CAR IS LEAVED.");
+		printf("表示车已经离开了");
 	}
 	return car_leaving_flag;
 }

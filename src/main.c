@@ -61,6 +61,7 @@
 #define CHANGE 1 
 
 #define DEBUG_LOG 1 
+#define JPEGTIME 1
 
 #if DEBUG_LOG
 static int g_flag = 0;
@@ -174,7 +175,7 @@ extern int SDC_SVP_ForwardBGR(HI_CHAR *pcSrcBGR, SDC_SSD_RESULT_S *pstResult, SD
 #define  APP_NAME   "safetyhat"
 #define LABEL_EVENT_DATA                 ("tag.saas.sdc")
 
-#define YUVtoJPEG  0 // YUV JPEG 编码调试
+#define YUVtoJPEG  1 // YUV JPEG 编码调试
  
 
 //excavator_dx
@@ -507,8 +508,13 @@ void * SDC_YuvDataProc(void *arg)
 
 	char remark[256];
 #endif
+#if JPEGTIME
+    char jpegchar[100];
+    time_t t;
+    struct tm * lt;
+#endif
     sdc_yuv_data_s stSdcYuvData;
-    sdc_yuv_frame_s stSdcYuvfram;
+    sdc_yuv_data_s stSdcYuvfram;
     int iQueueState;
     SDC_SSD_INPUT_SIZE_S InputSize;
 	SDC_SSD_RESULT_S stResult;
@@ -590,6 +596,8 @@ void * SDC_YuvDataProc(void *arg)
 
     while(1)
     {
+        time(&t);
+        lt = localtime(&t);
         if (g_stSystemManage.uiSystemState != SYS_STATE_NORMAL)
         {
             //usleep(10000);
@@ -617,15 +625,16 @@ void * SDC_YuvDataProc(void *arg)
                 printf("get frame with:%d != 416 !\n", stSdcYuvData.frame.width);
                 continue;
             }
-            stSdcYuvfram = stSdcYuvData.frame;
+            stSdcYuvfram=stSdcYuvData;
 
             clock_gettime(CLOCK_BOOTTIME, &time1);            
 
             iRetCode = SDC_TransYUV2RGB(fd_algorithm, &(stSdcYuvData.frame), &sdcRgb);
 
 			pts = stSdcYuvData.pts;			
-            SDC_YuvDataFree(fd_video, &stSdcYuvData);
 
+                                    // sprintf(jpegchar,"/tmp/%d-%d-%d-%d-%d.jpeg",1+lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec);
+                                    // JpegFileSaveYuv2Jpeg(&stSdcYuvfram.frame, jpegchar);
             g_uiFreeNum++;     
             
             if (iRetCode != OK)
@@ -985,6 +994,13 @@ void * SDC_YuvDataProc(void *arg)
 							cur_front = front[i];
 							cur_back = back[i];
 							car_in_flag = check_car_weather_in(car_point[i], cur_front, cur_back, one_car_pint_num);
+#ifdef YUVtoJPEG
+                            if(car_in_flag == 1){
+                                    // 保存Yuv视频帧为Jpeg图片，仅供用于本地测试使用--yjh0119
+                                    sprintf(jpegchar,"/tmp/%d-%d-%d-%d-%d.jpeg",1+lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec);
+                                    JpegFileSaveYuv2Jpeg(&stSdcYuvfram.frame, jpegchar);
+                            }
+#endif
 #if DEBUG_LOG
 							sprintf(remark, "frame: %d, flag2: %d",frame_num, car_in_flag);
 							printf_log(remark);
@@ -1004,6 +1020,7 @@ void * SDC_YuvDataProc(void *arg)
         uiTimeCout = (unsigned int)(time3.tv_sec - time1.tv_sec)*1000 + (unsigned int)((time3.tv_nsec - time1.tv_nsec)/1000000);
         
         fprintf(stdout,"forward_time:%d\n", uiTimeCout);
+        SDC_YuvDataFree(fd_video, &stSdcYuvData);
  
         //fprintf(stdout,"SDC used complete YuvDataFree\n "); 
     }
